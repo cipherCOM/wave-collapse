@@ -310,18 +310,16 @@ export class WaveCollapse {
    * @returns {boolean} - "true" whether the neighbor was successfully updated or "false" if a contradiction was found.
    */
   _propagate(updatedCell, neighbor, possibleTilesDirection, propagationHeap) {
-    let directionalPossibleTiles = new Set();
+    let possibleTiles = new Set();
     for (const tileIndex of updatedCell.possibleTiles) {
-      directionalPossibleTiles = new Set([
-        ...directionalPossibleTiles,
-        ...this.tiles[tileIndex][possibleTilesDirection],
-      ]);
+      for (const possibleTile of this.tiles[tileIndex][
+        possibleTilesDirection
+      ]) {
+        if (neighbor.possibleTiles.has(possibleTile)) {
+          possibleTiles.add(possibleTile);
+        }
+      }
     }
-    const possibleTiles = new Set(
-      Array.from(neighbor.possibleTiles).filter((t) =>
-        directionalPossibleTiles.has(t)
-      )
-    );
 
     if (possibleTiles.size === 0) {
       // Contradiction found
