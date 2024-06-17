@@ -141,35 +141,6 @@ export class WaveCollapse {
   //   }
 
   /**
-   * @param {Cell} cell
-   * @returns {Generator<[Direction, Cell]>}
-   */
-  *_neighbors(cell) {
-    /**
-     * @type {{name: Direction, x: number, y: number}[]}
-     */
-    const directions = [
-      { name: "Up", x: 0, y: -1 }, // Up
-      { name: "Right", x: 1, y: 0 }, // Right
-      { name: "Down", x: 0, y: 1 }, // Down
-      { name: "Left", x: -1, y: 0 }, // Left
-    ];
-
-    for (const direction of directions) {
-      const nx = cell.x + direction.x;
-      const ny = cell.y + direction.y;
-      if (
-        nx >= 0 &&
-        nx < this.grid[0].length &&
-        ny >= 0 &&
-        ny < this.grid.length
-      ) {
-        yield [direction.name, this.grid[ny][nx]];
-      }
-    }
-  }
-
-  /**
    * @returns {Cell}
    */
   _pickStartingCell() {
@@ -274,14 +245,56 @@ export class WaveCollapse {
    * @returns
    */
   _propagateToNeighbors(updatedCell, propagationHeap) {
-    for (const [direction, neighbor] of this._neighbors(updatedCell)) {
-      const succeeded = this._propagate(
-        updatedCell,
-        direction,
-        neighbor,
-        propagationHeap
-      );
-      if (!succeeded) {
+    // Roll out the direction "loop" and avoid even optimized stuff like generators.
+    if (updatedCell.y > 0) {
+      const neighbor = this.grid[updatedCell.y - 1][updatedCell.x];
+      if (
+        !this._propagate(
+          updatedCell,
+          neighbor,
+          "possibleTilesUp",
+          propagationHeap
+        )
+      ) {
+        return false;
+      }
+    }
+    if (updatedCell.x < this.grid[0].length - 1) {
+      const neighbor = this.grid[updatedCell.y][updatedCell.x + 1];
+      if (
+        !this._propagate(
+          updatedCell,
+          neighbor,
+          "possibleTilesRight",
+          propagationHeap
+        )
+      ) {
+        return false;
+      }
+    }
+    if (updatedCell.y < this.grid.length - 1) {
+      const neighbor = this.grid[updatedCell.y + 1][updatedCell.x];
+      if (
+        !this._propagate(
+          updatedCell,
+          neighbor,
+          "possibleTilesDown",
+          propagationHeap
+        )
+      ) {
+        return false;
+      }
+    }
+    if (updatedCell.x > 0) {
+      const neighbor = this.grid[updatedCell.y][updatedCell.x - 1];
+      if (
+        !this._propagate(
+          updatedCell,
+          neighbor,
+          "possibleTilesLeft",
+          propagationHeap
+        )
+      ) {
         return false;
       }
     }
@@ -291,17 +304,17 @@ export class WaveCollapse {
   /**
    * Update the neighbor's possible tiles based on the updated cell.
    * @param {Cell} updatedCell
-   * @param {Direction} direction
    * @param {Cell} neighbor
+   * @param {string} possibleTilesDirection
    * @param {Heap<Cell>} propagationHeap
    * @returns {boolean} - "true" whether the neighbor was successfully updated or "false" if a contradiction was found.
    */
-  _propagate(updatedCell, direction, neighbor, propagationHeap) {
+  _propagate(updatedCell, neighbor, possibleTilesDirection, propagationHeap) {
     let directionalPossibleTiles = new Set();
     for (const tileIndex of updatedCell.possibleTiles) {
       directionalPossibleTiles = new Set([
         ...directionalPossibleTiles,
-        ...this.tiles[tileIndex][`possibleTiles${direction}`],
+        ...this.tiles[tileIndex][possibleTilesDirection],
       ]);
     }
     const possibleTiles = new Set(
