@@ -457,16 +457,12 @@ class Cell {
    */
   updatePossibleTiles(possibleTiles) {
     this.possibleTiles = possibleTiles;
-    const possibleTilesArray = Array.from(possibleTiles);
-    this._sumOfWeights = possibleTilesArray.reduce((sum, tileIndex) => {
+    this._sumOfWeights = possibleTiles.reduce((sum, tileIndex) => {
       return sum + this.availableTiles[tileIndex].weight;
     }, 0);
-    this._sumOfWeightLogWeights = possibleTilesArray.reduce(
-      (sum, tileIndex) => {
-        return sum + this.availableTiles[tileIndex].weightLogWeight;
-      },
-      0
-    );
+    this._sumOfWeightLogWeights = possibleTiles.reduce((sum, tileIndex) => {
+      return sum + this.availableTiles[tileIndex].weightLogWeight;
+    }, 0);
     this.entropy = this._sumOfWeights
       ? Math.log2(this._sumOfWeights) -
         this._sumOfWeightLogWeights / this._sumOfWeights
