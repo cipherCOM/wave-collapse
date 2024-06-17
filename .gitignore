@@ -1,0 +1,9 @@
+.DS_Store
+raw
+node_modules
+*.log
+*.idea
+*.swp
+nyc_output
+coverage
+*.0x/

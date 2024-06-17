@@ -1,0 +1,52 @@
+{
+  "name": "wave-collapse",
+  "description": "A wave function collapse implementation in JavaScript. Inspired by https://github.com/mxgmn/WaveFunctionCollapse and https://github.com/kchapelier/wavefunctioncollapse",
+  "version": "0.1.0",
+  "author": "Patrik Schmittat",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ciphercom/wave-collapse.git"
+  },
+  "bugs": {
+    "url": "https://github.com/ciphercom/wave-collapse/issues"
+  },
+  "keywords": [
+    "wave",
+    "function",
+    "collapse",
+    "wfc",
+    "pattern",
+    "generation",
+    "procedural",
+    "tilemap",
+    "tile",
+    "map",
+    "dungeon",
+    "maze",
+    "sprite",
+    "spritesheet"
+  ],
+  "main": "src/wave-collapse.js",
+  "type": "module",
+  "dependencies": {
+    "heap-js": "2.5.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "9.5.0",
+    "0x": "5.7.0",
+    "chai": "5.1.1",
+    "eslint": "9.5.0",
+    "globals": "15.5.0",
+    "mocha": "10.4.0"
+  },
+  "scripts": {
+    "test": "npm run lint && mocha",
+    "lint": "eslint ."
+  },
+  "files": [
+    "src/*.js",
+    "LICENSE",
+    "README.md"
+  ]
+}
