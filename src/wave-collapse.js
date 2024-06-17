@@ -218,12 +218,12 @@ export class WaveCollapse {
         cell.collapse();
 
         // Heap for all the remaining propagations.
-        const propagationHeap = new Heap((a, b) => a.entropy - b.entropy);
-        propagationHeap.push(cell);
-        while (propagationHeap.length > 0) {
-          const nextCell = propagationHeap.pop();
+        const propagationQueue = [];
+        propagationQueue.push(cell);
+        while (propagationQueue.length > 0) {
+          const nextCell = propagationQueue.pop();
           // Update its neighbors and collect all updated neighbors in the propagation heap.
-          if (!this._propagateToNeighbors(nextCell, propagationHeap)) {
+          if (!this._propagateToNeighbors(nextCell, propagationQueue)) {
             break wave;
           }
         }
@@ -241,10 +241,10 @@ export class WaveCollapse {
 
   /**
    * @param {Cell} updatedCell
-   * @param {Heap<Cell>} propagationHeap
+   * @param {Cell[]} propagationQueue
    * @returns
    */
-  _propagateToNeighbors(updatedCell, propagationHeap) {
+  _propagateToNeighbors(updatedCell, propagationQueue) {
     // Roll out the direction "loop" and avoid even optimized stuff like generators.
     if (updatedCell.y > 0) {
       const neighbor = this.grid[updatedCell.y - 1][updatedCell.x];
@@ -253,7 +253,7 @@ export class WaveCollapse {
           updatedCell,
           neighbor,
           "possibleTilesUp",
-          propagationHeap
+          propagationQueue
         )
       ) {
         return false;
@@ -266,7 +266,7 @@ export class WaveCollapse {
           updatedCell,
           neighbor,
           "possibleTilesRight",
-          propagationHeap
+          propagationQueue
         )
       ) {
         return false;
@@ -279,7 +279,7 @@ export class WaveCollapse {
           updatedCell,
           neighbor,
           "possibleTilesDown",
-          propagationHeap
+          propagationQueue
         )
       ) {
         return false;
@@ -292,7 +292,7 @@ export class WaveCollapse {
           updatedCell,
           neighbor,
           "possibleTilesLeft",
-          propagationHeap
+          propagationQueue
         )
       ) {
         return false;
@@ -306,10 +306,10 @@ export class WaveCollapse {
    * @param {Cell} updatedCell
    * @param {Cell} neighbor
    * @param {string} possibleTilesDirection
-   * @param {Heap<Cell>} propagationHeap
+   * @param {Cell[]} propagationHeap
    * @returns {boolean} - "true" whether the neighbor was successfully updated or "false" if a contradiction was found.
    */
-  _propagate(updatedCell, neighbor, possibleTilesDirection, propagationHeap) {
+  _propagate(updatedCell, neighbor, possibleTilesDirection, propagationQueue) {
     const possibleTiles = [];
     for (const tileIndex of updatedCell.possibleTiles) {
       for (const possibleTile of this.tiles[tileIndex][
@@ -329,9 +329,10 @@ export class WaveCollapse {
       return false;
     }
     if (possibleTiles.length !== neighbor.possibleTiles.length) {
-      propagationHeap.remove(neighbor);
       neighbor.updatePossibleTiles(possibleTiles);
-      propagationHeap.push(neighbor);
+      if (!propagationQueue.includes(neighbor)) {
+        propagationQueue.push(neighbor);
+      }
     }
     return true;
   }
