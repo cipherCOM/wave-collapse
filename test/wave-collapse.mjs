@@ -153,6 +153,22 @@ it("fails to generate 3x3 grid due to contradiction on one side only", () => {
   expect(level).equal(null);
 });
 
+it("handles edge cases with narrow grids (1xN)", () => {
+  const wfc = new WaveCollapse({
+    tiles: [{ edges: ["A", "A", "A", "A"] }],
+  });
+  const level = wfc.generate(10, 1);
+  expect(level).deep.equal([[0, 0, 0, 0, 0, 0, 0, 0, 0, 0]]);
+});
+
+it("handles edge cases with wide grids (Nx1)", () => {
+  const wfc = new WaveCollapse({
+    tiles: [{ edges: ["A", "A", "A", "A"] }],
+  });
+  const level = wfc.generate(1, 10);
+  expect(level).deep.equal([[0], [0], [0], [0], [0], [0], [0], [0], [0], [0]]);
+});
+
 it("can handle basic large grids", () => {
   const wfc = new WaveCollapse({
     tiles: [{ edges: ["A", "A", "A", "A"] }],
