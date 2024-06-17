@@ -182,7 +182,7 @@ export class WaveCollapse {
         break;
     }
     this.grid[y][x].tileIndex = startCell.tileIndex;
-    this.grid[y][x].updatePossibleTiles(new Set([startCell.tileIndex]));
+    this.grid[y][x].updatePossibleTiles([startCell.tileIndex]);
     return this.grid[y][x];
   }
 
@@ -310,22 +310,25 @@ export class WaveCollapse {
    * @returns {boolean} - "true" whether the neighbor was successfully updated or "false" if a contradiction was found.
    */
   _propagate(updatedCell, neighbor, possibleTilesDirection, propagationHeap) {
-    let possibleTiles = new Set();
+    const possibleTiles = [];
     for (const tileIndex of updatedCell.possibleTiles) {
       for (const possibleTile of this.tiles[tileIndex][
         possibleTilesDirection
       ]) {
-        if (neighbor.possibleTiles.has(possibleTile)) {
-          possibleTiles.add(possibleTile);
+        if (
+          neighbor.possibleTiles.includes(possibleTile) &&
+          !possibleTiles.includes(possibleTile)
+        ) {
+          possibleTiles.push(possibleTile);
         }
       }
     }
 
-    if (possibleTiles.size === 0) {
+    if (possibleTiles.length === 0) {
       // Contradiction found
       return false;
     }
-    if (possibleTiles.size !== neighbor.possibleTiles.size) {
+    if (possibleTiles.length !== neighbor.possibleTiles.length) {
       propagationHeap.remove(neighbor);
       neighbor.updatePossibleTiles(possibleTiles);
       propagationHeap.push(neighbor);
@@ -435,7 +438,7 @@ class Tile {
  * @property {number} x
  * @property {number} y
  * @property {Tile[]} availableTiles - The available tiles for the whole generation.
- * @property {Set<number>} possibleTiles - The possible tiles that can be placed in this cell.
+ * @property {number[]} possibleTiles - The possible tiles that can be placed in this cell.
  * @property {number|null} tileIndex - The index of the tile that was collapsed to this cell.
  * @property {number} entropy - The Shannon entropy of the cell. See: https://robertheaton.com/2018/12/17/wavefunction-collapse-algorithm/
  *
@@ -454,11 +457,11 @@ class Cell {
     this.availableTiles = availableTiles;
 
     this.tileIndex = null;
-    this.updatePossibleTiles(new Set(availableTiles.map((_, index) => index)));
+    this.updatePossibleTiles(availableTiles.map((_, index) => index));
   }
 
   /**
-   * @param {Set<number>} possibleTiles
+   * @param {number[]} possibleTiles
    */
   updatePossibleTiles(possibleTiles) {
     this.possibleTiles = possibleTiles;
@@ -483,13 +486,12 @@ class Cell {
    * @returns
    */
   collapse() {
-    if (this.possibleTiles.size === 0) {
+    if (this.possibleTiles.length === 0) {
       throw new Error("No possible tiles to collapse to.");
     }
 
     // Selects tile based on weights randomly.
-    const possibleTilesArray = Array.from(this.possibleTiles);
-    const weights = possibleTilesArray.map(
+    const weights = this.possibleTiles.map(
       (tileIndex) => this.availableTiles[tileIndex].weight
     );
     const totalWeight = weights.reduce((sum, weight) => sum + weight, 0);
@@ -498,9 +500,9 @@ class Cell {
     for (let i = 0; i < weights.length; i++) {
       randomWeight -= weights[i];
       if (randomWeight <= 0) {
-        const chosenTile = possibleTilesArray[i];
+        const chosenTile = this.possibleTiles[i];
         this.tileIndex = chosenTile;
-        this.possibleTiles = new Set([chosenTile]);
+        this.possibleTiles = [chosenTile];
         this.entropy = 0; // Entropy is zero since the cell is collapsed
         return;
       }
