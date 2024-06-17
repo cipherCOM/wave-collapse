@@ -345,10 +345,10 @@ export class WaveCollapse {
  * @property {number} weightLogWeight - The weight of the tile multiplied by the logarithm of the weight.
  * @property {string|undefined} type - A custom type given by the user of the tile (e.g., 'floor', 'wall').
  *
- * @property {Set<number>} possibleTilesUp - The possible tiles (via index) that can be placed above this tile.
- * @property {Set<number>} possibleTilesRight - The possible tiles (via index) that can be placed to the right of this tile.
- * @property {Set<number>} possibleTilesDown - The possible tiles (via index) that can be placed below this tile.
- * @property {Set<number>} possibleTilesLeft - The possible tiles (via index) that can be placed to the left of this tile.
+ * @property {number[]} possibleTilesUp - The possible tiles (via index) that can be placed above this tile.
+ * @property {number[]} possibleTilesRight - The possible tiles (via index) that can be placed to the right of this tile.
+ * @property {number[]} possibleTilesDown - The possible tiles (via index) that can be placed below this tile.
+ * @property {number[]} possibleTilesLeft - The possible tiles (via index) that can be placed to the left of this tile.
  */
 class Tile {
   /**
@@ -390,46 +390,38 @@ class Tile {
       return true;
     }
 
-    this.possibleTilesUp = new Set(
-      tileDefinitions
-        .map((otherTile, otherIndex) => {
-          return this.edges[0] === otherTile.edges[2] &&
-            checkExceptions(this, otherTile)
-            ? otherIndex
-            : null;
-        })
-        .filter((index) => index !== null)
-    );
-    this.possibleTilesRight = new Set(
-      tileDefinitions
-        .map((otherTile, otherIndex) => {
-          return this.edges[1] === otherTile.edges[3] &&
-            checkExceptions(this, otherTile)
-            ? otherIndex
-            : null;
-        })
-        .filter((index) => index !== null)
-    );
-    this.possibleTilesDown = new Set(
-      tileDefinitions
-        .map((otherTile, otherIndex) => {
-          return this.edges[2] === otherTile.edges[0] &&
-            checkExceptions(this, otherTile)
-            ? otherIndex
-            : null;
-        })
-        .filter((index) => index !== null)
-    );
-    this.possibleTilesLeft = new Set(
-      tileDefinitions
-        .map((otherTile, otherIndex) => {
-          return this.edges[3] === otherTile.edges[1] &&
-            checkExceptions(this, otherTile)
-            ? otherIndex
-            : null;
-        })
-        .filter((index) => index !== null)
-    );
+    this.possibleTilesUp = tileDefinitions
+      .map((otherTile, otherIndex) => {
+        return this.edges[0] === otherTile.edges[2] &&
+          checkExceptions(this, otherTile)
+          ? otherIndex
+          : null;
+      })
+      .filter((index) => index !== null);
+    this.possibleTilesRight = tileDefinitions
+      .map((otherTile, otherIndex) => {
+        return this.edges[1] === otherTile.edges[3] &&
+          checkExceptions(this, otherTile)
+          ? otherIndex
+          : null;
+      })
+      .filter((index) => index !== null);
+    this.possibleTilesDown = tileDefinitions
+      .map((otherTile, otherIndex) => {
+        return this.edges[2] === otherTile.edges[0] &&
+          checkExceptions(this, otherTile)
+          ? otherIndex
+          : null;
+      })
+      .filter((index) => index !== null);
+    this.possibleTilesLeft = tileDefinitions
+      .map((otherTile, otherIndex) => {
+        return this.edges[3] === otherTile.edges[1] &&
+          checkExceptions(this, otherTile)
+          ? otherIndex
+          : null;
+      })
+      .filter((index) => index !== null);
   }
 }
 
