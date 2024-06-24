@@ -169,6 +169,18 @@ it("handles edge cases with wide grids (Nx1)", () => {
   expect(level).deep.equal([[0], [0], [0], [0], [0], [0], [0], [0], [0], [0]]);
 });
 
+it("can handle basic middle large grids", () => {
+  const wfc = new WaveCollapse({
+    tiles: [{ edges: ["A", "A", "A", "A"] }],
+  });
+  const level = wfc.generate(100, 100);
+  expect(level.length).to.equal(100);
+  expect(level[0].length).to.equal(100);
+  level.forEach(
+    (row) => expect(row.every((tileIndex) => tileIndex === 0)).true
+  );
+});
+
 it("can handle basic large grids", () => {
   const wfc = new WaveCollapse({
     tiles: [{ edges: ["A", "A", "A", "A"] }],

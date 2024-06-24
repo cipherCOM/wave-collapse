@@ -18,4 +18,4 @@ const wfc = new WaveCollapse({
     }, // 8: floor
   ],
 });
-wfc.generate(1_000, 1_000);
+wfc.generate(100, 100);
