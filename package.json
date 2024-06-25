@@ -48,6 +48,7 @@
     "test": "npm run build && npm run test-only",
     "format": "prettier --write .",
     "test-only": "vitest run",
+    "benchmark": "vitest bench",
     "build-fast": "npm run build -- --no-dts"
   },
   "files": [
