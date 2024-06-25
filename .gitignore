@@ -1,9 +1,7 @@
 .DS_Store
-raw
-node_modules
+node_modules/
+playground/
 *.log
-*.idea
+.idea
 *.swp
-nyc_output
-coverage
 *.0x/
