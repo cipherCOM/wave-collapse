@@ -114,24 +114,25 @@ export class WaveCollapse {
           this.definition.options.defaultTileWeight!,
         ),
     )
-
-    this._clear()
   }
 
   private _clear(): void {
     // Clear the wave collapse data from any previous runs.
-    this.grid = [[]]
-    this._retryCount = 0
+    for (let y = 0; y < this.grid.length; y++) {
+      for (let x = 0; x < this.grid[0].length; x++) {
+        this.grid[y][x].clear()
+      }
+    }
   }
 
   private _initializeGrid(width: number, height: number): void {
-    this.grid = []
+    this.grid = new Array<Cell[]>(height)
     for (let y = 0; y < height; y++) {
-      const row: Cell[] = []
+      const row = new Array<Cell>(width)
       for (let x = 0; x < width; x++) {
-        row.push(new Cell(x, y, this.tiles))
+        row[x] = new Cell(x, y, this.tiles)
       }
-      this.grid.push(row)
+      this.grid[y] = row
     }
   }
 
@@ -186,12 +187,11 @@ export class WaveCollapse {
     if (width <= 0 || height <= 0) {
       return []
     }
-    this._clear()
+    // Setup all necessary data structures for the algorithm.
+    this._initializeGrid(width, height)
 
+    this._retryCount = 0
     while (this._retryCount < this.definition.options.maxRetryCount!) {
-      // Setup all necessary data structures for the algorithm.
-      this._initializeGrid(width, height)
-
       // Pick the starting cell. Since it has its possibilities reduced to one, it will be the first cell to collapse.
       this._pickStartingCell()
 
@@ -231,6 +231,7 @@ export class WaveCollapse {
         return this.grid.map((row) => row.map((cell) => cell.tileIndex!))
       }
       this._retryCount++
+      this._clear()
     }
 
     return null
@@ -337,10 +338,8 @@ export class WaveCollapse {
       const oldEntropy = neighbor.entropy
       neighbor.updatePossibleTiles(possibleTiles)
       waveHeap.refresh(neighbor, oldEntropy)
-
-      if (!propagationQueue.includes(neighbor)) {
-        propagationQueue.push(neighbor)
-      }
+      // don't check for inclusion because this will hit performance harder than checking twice
+      propagationQueue.push(neighbor)
     }
     return true
   }
@@ -460,7 +459,7 @@ class Cell {
   /** The possible tiles that can be placed in this cell. */
   public possibleTiles: number[] = []
   /** The index of the tile that was collapsed to this cell. */
-  public tileIndex: number | null
+  public tileIndex: number | null = null
   /** The Shannon entropy of the cell. See: https://robertheaton.com/2018/12/17/wavefunction-collapse-algorithm/ */
   public entropy: number = 0
   public listNode: ListNode<any> | undefined
@@ -473,8 +472,12 @@ class Cell {
     this.randomIndex = Math.floor(Math.random() * 0xffffffff)
     this.availableTiles = availableTiles
 
+    this.clear()
+  }
+
+  clear(): void {
     this.tileIndex = null
-    this.updatePossibleTiles(availableTiles.map((_, index) => index))
+    this.updatePossibleTiles(this.availableTiles.map((_, index) => index))
   }
 
   updatePossibleTiles(possibleTiles: number[]): void {
