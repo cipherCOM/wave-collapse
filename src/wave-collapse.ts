@@ -1,3 +1,5 @@
+import { ListNode, PrioList } from './prio-list'
+
 type CellCoords = {
   x: number
   y: number
@@ -193,25 +195,21 @@ export class WaveCollapse {
       // Pick the starting cell. Since it has its possibilities reduced to one, it will be the first cell to collapse.
       this._pickStartingCell()
 
-      const waveHeap: Cell[] = []
-      // const waveHeap = new Heap(
-      //   // (a, b) => a.entropy - b.entropy
-      //   (a, b) => a.entropy - b.entropy || a.randomIndex - b.randomIndex
-      //   // (a, b) => a.entropy - b.entropy || a.y - b.y
-      // );
+      // const waveHeap: Cell[] = []
+      const waveHeap = new PrioList<Cell>(
+        (a) => a.entropy,
+        // (a, b) => a.entropy - b.entropy || a.randomIndex - b.randomIndex,
+      )
       for (const row of this.grid) {
         for (const cell of row) {
           waveHeap.push(cell)
         }
       }
-      waveHeap.sort(
-        (a, b) => a.entropy - b.entropy || a.randomIndex - b.randomIndex,
-      )
 
       // Continue collapsing cells until the grid is filled.
-      wave: while (waveHeap.length > 0) {
+      wave: while (!waveHeap.isEmpty()) {
         // Pick next cell with lowest entropy and collapse it.
-        const cell = waveHeap.shift()!
+        const cell = waveHeap.pop()!
         cell.collapse()
 
         // Heap for all the remaining propagations.
@@ -229,7 +227,7 @@ export class WaveCollapse {
       }
 
       // If the grid is filled, return the result.
-      if (waveHeap.length === 0) {
+      if (waveHeap.isEmpty()) {
         return this.grid.map((row) => row.map((cell) => cell.tileIndex!))
       }
       this._retryCount++
@@ -240,7 +238,7 @@ export class WaveCollapse {
 
   private _propagateToNeighbors(
     updatedCell: Cell,
-    waveHeap: Cell[],
+    waveHeap: PrioList<Cell>,
     propagationQueue: Cell[],
   ): boolean {
     // Roll out the direction "loop" and avoid even optimized stuff like generators.
@@ -314,7 +312,7 @@ export class WaveCollapse {
     updatedCell: Cell,
     neighbor: Cell,
     possibleTilesDirection: keyof Tile,
-    waveHeap: Cell[],
+    waveHeap: PrioList<Cell>,
     propagationQueue: Cell[],
   ): boolean {
     const possibleTiles: number[] = []
@@ -337,107 +335,8 @@ export class WaveCollapse {
     }
     if (possibleTiles.length !== neighbor.possibleTiles.length) {
       const oldEntropy = neighbor.entropy
-      // waveHeap.remove(neighbor);
       neighbor.updatePossibleTiles(possibleTiles)
-      // waveHeap.push(neighbor);
-      if (neighbor.entropy !== oldEntropy) {
-        const index = waveHeap.indexOf(neighbor)
-        waveHeap.splice(index, 1)
-
-        let newIndex = waveHeap.findIndex(
-          (other) =>
-            neighbor.entropy < other.entropy ||
-            (neighbor.entropy === other.entropy &&
-              neighbor.randomIndex < other.randomIndex),
-        )
-        if (newIndex === -1) {
-          newIndex = waveHeap.length
-        }
-        waveHeap.splice(newIndex, 0, neighbor)
-      }
-
-      // if (neighbor.entropy !== oldEntropy) {
-      // let left = 0;
-      // let right = waveHeap.length - 1;
-      // let index = null;
-
-      // while (left <= right) {
-      //   let mid = Math.floor((left + right) / 2);
-
-      //   if (waveHeap[mid] === neighbor) {
-      //     index = mid;
-      //     break;
-      //   } else if (
-      //     waveHeap[mid].entropy < oldEntropy ||
-      //     (waveHeap[mid].entropy === oldEntropy &&
-      //       waveHeap[mid].randomIndex < neighbor.randomIndex)
-      //   ) {
-      //     left = mid + 1; // Search in the right half
-      //   } else {
-      //     right = mid - 1; // Search in the left half
-      //   }
-      // }
-
-      // assert(index !== null, "Index should not be null");
-      // assert(waveHeap[index] === neighbor, "Index should be the neighbor");
-
-      // waveHeap.splice(index, 1);
-
-      // left = 0;
-      // right = waveHeap.length - 1;
-      // index = null;
-
-      // if (
-      //   waveHeap.length === 0 ||
-      //   waveHeap[0].entropy > neighbor.entropy ||
-      //   (waveHeap[0].entropy === neighbor.entropy &&
-      //     waveHeap[0].randomIndex > neighbor.randomIndex)
-      // ) {
-      //   index = 0;
-      // } else {
-      //   // find insertion index with binary search
-      //   while (left <= right) {
-      //     let mid = Math.floor((left + right) / 2);
-
-      //     if (
-      //       waveHeap[mid].entropy < neighbor.entropy ||
-      //       (waveHeap[mid].entropy === neighbor.entropy &&
-      //         waveHeap[mid].randomIndex < neighbor.randomIndex)
-      //     ) {
-      //       left = mid + 1; // Search in the right half
-      //     } else {
-      //       right = mid - 1; // Search in the left half
-      //     }
-      //   }
-      //   index = left;
-      // }
-
-      // assert(index !== null, "Index should not be null");
-      // assert(
-      //   waveHeap.length >= index ||
-      //     waveHeap[index].entropy > neighbor.entropy ||
-      //     (waveHeap[index].entropy === neighbor.entropy &&
-      //       waveHeap[index].randomIndex > neighbor.randomIndex),
-      //   "Index should be the neighbor"
-      // );
-      // assert(
-      //   waveHeap.findIndex(
-      //     (o) =>
-      //       neighbor.entropy < o.entropy ||
-      //       (neighbor.entropy === o.entropy &&
-      //         neighbor.randomIndex < o.randomIndex)
-      //   ) === index ||
-      //     waveHeap.findIndex(
-      //       (o) =>
-      //         neighbor.entropy < o.entropy ||
-      //         (neighbor.entropy === o.entropy &&
-      //           neighbor.randomIndex < o.randomIndex)
-      //     ) === -1,
-      //   "Index should be correct"
-      // );
-
-      // waveHeap.splice(index, 0, neighbor);
-      // }
+      waveHeap.refresh(neighbor, oldEntropy)
 
       if (!propagationQueue.includes(neighbor)) {
         propagationQueue.push(neighbor)
@@ -564,6 +463,7 @@ class Cell {
   public tileIndex: number | null
   /** The Shannon entropy of the cell. See: https://robertheaton.com/2018/12/17/wavefunction-collapse-algorithm/ */
   public entropy: number = 0
+  public listNode: ListNode<any> | undefined
   private _sumOfWeights: number = 0
   private _sumOfWeightLogWeights: number = 0
 

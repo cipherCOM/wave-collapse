@@ -48,7 +48,9 @@
     "test": "npm run build && npm run test-only",
     "format": "prettier --write .",
     "test-only": "vitest run",
-    "benchmark": "vitest bench",
+    "test-watch": "vitest watch",
+    "benchmark": "vitest bench --compare benchmark-baseline.json",
+    "benchmark-set-baseline": "vitest bench --run --outputJson benchmark-baseline.json",
     "build-fast": "npm run build -- --no-dts"
   },
   "files": [
