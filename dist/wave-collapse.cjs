@@ -23,11 +23,119 @@ __export(wave_collapse_exports, {
   WaveCollapse: () => WaveCollapse
 });
 module.exports = __toCommonJS(wave_collapse_exports);
+
+// src/prio-list.ts
+var PrioList = class {
+  constructor(prioAccess) {
+    this.prioAccess = prioAccess;
+  }
+  head;
+  prios = [];
+  prioLookup = /* @__PURE__ */ new Map();
+  push(item) {
+    const node = new ListNode(item);
+    item.listNode = node;
+    this.insertNodeInPrios(node);
+    if (!this.head || this.head.prev == node) {
+      this.head = node;
+    }
+  }
+  pop() {
+    if (!this.head) {
+      return void 0;
+    }
+    const node = this.head;
+    this.removeNodeFromPrios(node, this.prioAccess(node.value));
+    this.head = node.next;
+    node.value.listNode = void 0;
+    return node.value;
+  }
+  refresh(item, oldPriority) {
+    if (!item.listNode) {
+      throw new Error("Item is not in the list");
+    }
+    if (this.prioAccess(item) == oldPriority) {
+      return;
+    }
+    this.removeNodeFromPrios(item.listNode, oldPriority);
+    if (this.head == item.listNode) {
+      this.head = item.listNode.next;
+    }
+    this.insertNodeInPrios(item.listNode);
+    if (!this.head || this.head.prev == item.listNode) {
+      this.head = item.listNode;
+    }
+  }
+  isEmpty() {
+    return !this.head;
+  }
+  insertNodeInPrios(node) {
+    const prio = this.prioAccess(node.value);
+    let other;
+    if (other = this.prioLookup.get(prio)) {
+      if (other.next) other.next.prev = node;
+      node.next = other.next;
+      node.prev = other;
+      other.next = node;
+      this.prioLookup.set(prio, node);
+      return;
+    }
+    let foundIdx;
+    for (let [idx, other2] of this.prios.entries()) {
+      if (other2 > prio) {
+        foundIdx = idx;
+        break;
+      }
+    }
+    if (foundIdx === void 0) {
+      const last = this.prioLookup.get(this.prios[this.prios.length - 1]);
+      if (last) {
+        last.next = node;
+        node.prev = last;
+      }
+      this.prios.push(prio);
+      this.prioLookup.set(prio, node);
+      return;
+    }
+    other = this.prioLookup.get(this.prios[foundIdx]);
+    if (other.prev) other.prev.next = node;
+    node.prev = other.prev;
+    node.next = other;
+    other.prev = node;
+    this.prios.splice(foundIdx, 0, prio);
+    this.prioLookup.set(prio, node);
+  }
+  removeNodeFromPrios(node, prio) {
+    if (node.prev) node.prev.next = node.next;
+    if (node.next) node.next.prev = node.prev;
+    if (node !== this.prioLookup.get(prio)) {
+      return;
+    }
+    if (!node.prev || this.prioAccess(node.prev.value) != prio) {
+      this.prioLookup.delete(prio);
+      this.prios.splice(this.prios.indexOf(prio), 1);
+      return;
+    }
+    this.prioLookup.set(prio, node.prev);
+  }
+};
+var ListNode = class {
+  constructor(value, prev = void 0, next = void 0) {
+    this.value = value;
+    this.prev = prev;
+    this.next = next;
+  }
+};
+
+// src/wave-collapse.ts
 var WaveCollapse = class {
+  definition;
+  /** The tiles objects derived from their definitions. */
+  tiles;
+  /** The grid of cells. */
+  grid = [[]];
+  _retryCount = 0;
   constructor(definition) {
-    this.grid = [[]];
-    this._retryCount = 0;
-    var _a, _b, _c, _d, _e, _f, _g, _h, _i, _j;
     if (!definition.tiles || definition.tiles.length === 0) {
       throw new Error("No tiles are defined.");
     }
@@ -39,40 +147,48 @@ var WaveCollapse = class {
     )) {
       throw new Error("All edges must have a length of at least 1.");
     }
-    if (((_b = (_a = definition.options) == null ? void 0 : _a.startCell) == null ? void 0 : _b.cell) === "defined" && !definition.options.startCell.cellCoords) {
+    if (definition.options?.startCell?.cell === "defined" && !definition.options.startCell.cellCoords) {
       throw new Error(
         "The start cell is 'defined', but no coordinates are given."
       );
     }
-    this.definition = definition;
-    (_d = (_c = this.definition).options) != null ? _d : _c.options = {};
-    (_f = (_e = this.definition.options).defaultTileWeight) != null ? _f : _e.defaultTileWeight = 10;
-    (_h = (_g = this.definition.options).startCell) != null ? _h : _g.startCell = {
+    this.definition = { options: {}, ...definition };
+    this.definition.options.defaultTileWeight ??= 10;
+    this.definition.options.startCell ??= {
       cell: "random",
       tileIndex: Math.floor(Math.random() * definition.tiles.length)
     };
-    (_j = (_i = this.definition.options).maxRetryCount) != null ? _j : _i.maxRetryCount = 100;
+    this.definition.options.maxRetryCount ??= 100;
     this.tiles = definition.tiles.map(
-      (_, index) => new Tile(definition.tiles, index, definition.options.defaultTileWeight)
+      (_, index) => new Tile(
+        definition.tiles,
+        index,
+        this.definition.options.defaultTileWeight
+      )
     );
-    this._clear();
   }
   _clear() {
-    this.grid = [[]];
-    this._retryCount = 0;
+    for (let y = 0; y < this.grid.length; y++) {
+      for (let x = 0; x < this.grid[0].length; x++) {
+        this.grid[y][x].clear();
+      }
+    }
   }
   _initializeGrid(width, height) {
-    this.grid = [];
+    this.grid = new Array(height);
     for (let y = 0; y < height; y++) {
-      const row = [];
+      const row = new Array(width);
       for (let x = 0; x < width; x++) {
-        row.push(new Cell(x, y, this.tiles));
+        row[x] = new Cell(x, y, this.tiles);
       }
-      this.grid.push(row);
+      this.grid[y] = row;
     }
   }
   _pickStartingCell() {
     const { startCell } = this.definition.options;
+    if (!startCell) {
+      throw new Error("No start cell is defined.");
+    }
     let x, y;
     switch (startCell.cell) {
       case "middle":
@@ -101,6 +217,7 @@ var WaveCollapse = class {
             "The start cell is 'defined', but no coordinates are given."
           );
         }
+        ;
         ({ x, y } = startCell.cellCoords);
         break;
       case "random":
@@ -117,21 +234,21 @@ var WaveCollapse = class {
     if (width <= 0 || height <= 0) {
       return [];
     }
-    this._clear();
+    this._initializeGrid(width, height);
+    this._retryCount = 0;
     while (this._retryCount < this.definition.options.maxRetryCount) {
-      this._initializeGrid(width, height);
       this._pickStartingCell();
-      const waveHeap = [];
+      const waveHeap = new PrioList(
+        (a) => a.entropy
+        // (a, b) => a.entropy - b.entropy || a.randomIndex - b.randomIndex,
+      );
       for (const row of this.grid) {
         for (const cell of row) {
           waveHeap.push(cell);
         }
       }
-      waveHeap.sort(
-        (a, b) => a.entropy - b.entropy || a.randomIndex - b.randomIndex
-      );
-      wave: while (waveHeap.length > 0) {
-        const cell = waveHeap.shift();
+      wave: while (!waveHeap.isEmpty()) {
+        const cell = waveHeap.pop();
         cell.collapse();
         const propagationQueue = [];
         propagationQueue.push(cell);
@@ -142,10 +259,11 @@ var WaveCollapse = class {
           }
         }
       }
-      if (waveHeap.length === 0) {
+      if (waveHeap.isEmpty()) {
         return this.grid.map((row) => row.map((cell) => cell.tileIndex));
       }
       this._retryCount++;
+      this._clear();
     }
     return null;
   }
@@ -200,6 +318,13 @@ var WaveCollapse = class {
     }
     return true;
   }
+  /**
+   * Update the neighbor's possible tiles based on the updated cell.
+   *
+   * If any of the neighbor's possible tiles are updated, they will be added to the propagation queue.
+   *
+   * @returns `true` whether the neighbor was successfully updated or `false` if a contradiction was found.
+   */
   _propagate(updatedCell, neighbor, possibleTilesDirection, waveHeap, propagationQueue) {
     const possibleTiles = [];
     for (const tileIndex of updatedCell.possibleTiles) {
@@ -215,37 +340,48 @@ var WaveCollapse = class {
     if (possibleTiles.length !== neighbor.possibleTiles.length) {
       const oldEntropy = neighbor.entropy;
       neighbor.updatePossibleTiles(possibleTiles);
-      if (neighbor.entropy !== oldEntropy) {
-        const index = waveHeap.indexOf(neighbor);
-        waveHeap.splice(index, 1);
-        let newIndex = waveHeap.findIndex(
-          (other) => neighbor.entropy < other.entropy || neighbor.entropy === other.entropy && neighbor.randomIndex < other.randomIndex
-        );
-        if (newIndex === -1) {
-          newIndex = waveHeap.length;
-        }
-        waveHeap.splice(newIndex, 0, neighbor);
-      }
-      if (!propagationQueue.includes(neighbor)) {
-        propagationQueue.push(neighbor);
-      }
+      waveHeap.refresh(neighbor, oldEntropy);
+      propagationQueue.push(neighbor);
     }
     return true;
   }
 };
 var Tile = class {
+  /** The index of the tile within the tile definitions. */
+  index;
+  /** The compatibility edges of the tile. Only matching edges can be placed next to each other.
+   *
+   * A good notation is e.g. 'ABC' or 'AAA' describing how the edge "looks like". The order is "top", "right", "bottom", "left".
+   *
+   * Mind that when describing the edges when looking at a visual tileset top and bottomedges are written from left to right and left and right edges from top to bottom. */
+  edges;
+  /** The exceptions for the tile. If the tile has a type, the exceptions can be defined by the type. */
+  exceptions;
+  /** A custom type given by the user of the tile (e.g., 'floor', 'wall'). This is used to define exceptions for the tile. */
+  type;
+  /** The weight of the tile. Can also be 0, which effectively removes the tile from the generation. */
+  weight;
+  /** The weight of the tile multiplied by the logarithm of the weight. */
+  weightLogWeight;
+  /** The possible tiles (via index) that can be placed above this tile. */
+  possibleTilesUp;
+  /** The possible tiles (via index) that can be placed to the right of this tile. */
+  possibleTilesRight;
+  /** The possible tiles (via index) that can be placed below this tile. */
+  possibleTilesDown;
+  /** The possible tiles (via index) that can be placed to the left of this tile. */
+  possibleTilesLeft;
   constructor(tileDefinitions, tileIndex, defaultWeight = 10) {
-    var _a;
     const definition = tileDefinitions[tileIndex];
     this.index = tileIndex;
     this.edges = definition.edges;
     this.exceptions = definition.exceptions;
-    this.weight = (_a = definition.weight) != null ? _a : defaultWeight;
+    this.weight = definition.weight ?? defaultWeight;
     this.weightLogWeight = this.weight ? this.weight * Math.log2(this.weight) : 0;
     this.type = definition.type;
     const checkExceptions = (tile, otherTile) => {
       const exceptions = tile.exceptions;
-      if (!exceptions) {
+      if (!exceptions || !otherTile.type) {
         return true;
       }
       if (Array.isArray(exceptions)) {
@@ -280,17 +416,30 @@ var Tile = class {
   }
 };
 var Cell = class {
+  x;
+  y;
+  randomIndex;
+  /** The available tiles for the whole generation. */
+  availableTiles;
+  /** The possible tiles that can be placed in this cell. */
+  possibleTiles = [];
+  /** The index of the tile that was collapsed to this cell. */
+  tileIndex = null;
+  /** The Shannon entropy of the cell. See: https://robertheaton.com/2018/12/17/wavefunction-collapse-algorithm/ */
+  entropy = 0;
+  listNode;
+  _sumOfWeights = 0;
+  _sumOfWeightLogWeights = 0;
   constructor(x, y, availableTiles) {
-    this.possibleTiles = [];
-    this.entropy = 0;
-    this._sumOfWeights = 0;
-    this._sumOfWeightLogWeights = 0;
     this.x = x;
     this.y = y;
     this.randomIndex = Math.floor(Math.random() * 4294967295);
     this.availableTiles = availableTiles;
+    this.clear();
+  }
+  clear() {
     this.tileIndex = null;
-    this.updatePossibleTiles(availableTiles.map((_, index) => index));
+    this.updatePossibleTiles(this.availableTiles.map((_, index) => index));
   }
   updatePossibleTiles(possibleTiles) {
     this.possibleTiles = possibleTiles;
