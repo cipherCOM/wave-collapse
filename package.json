@@ -31,9 +31,6 @@
   "module": "dist/index.mjs",
   "types": "dist/index.d.ts",
   "type": "module",
-  "dependencies": {
-    "heap-js": "2.5.0"
-  },
   "devDependencies": {
     "0x": "5.7.0",
     "prettier": "3.3.2",
@@ -43,7 +40,7 @@
   },
   "scripts": {
     "dev": "npm run build-fast -- --watch",
-    "build": "tsup src/*.ts --clean",
+    "build": "tsup src/index.ts --clean",
     "prepublishOnly": "npm run build",
     "test": "npm run build && npm run test-only",
     "format": "prettier --write .",
@@ -62,7 +59,7 @@
   "exports": {
     ".": {
       "require": "./dist/index.js",
-      "import": "./dist/index.mjs",
+      "import": "./dist/index.cjs",
       "types": "./dist/index.d.ts"
     }
   }
