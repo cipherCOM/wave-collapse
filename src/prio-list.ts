@@ -77,6 +77,7 @@ export class PrioList<T extends ListElement<T>> {
       if (last) {
         last.next = node
         node.prev = last
+        node.next = undefined
       }
       this.prios.push(prio)
       this.prioLookup.set(prio, node)

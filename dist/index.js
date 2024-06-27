@@ -66,6 +66,7 @@ var PrioList = class {
       if (last) {
         last.next = node;
         node.prev = last;
+        node.next = void 0;
       }
       this.prios.push(prio);
       this.prioLookup.set(prio, node);
